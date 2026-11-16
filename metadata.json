@@ -1,0 +1,6 @@
+{
+  "name": "ScriptFlow AI",
+  "description": "استوديو ذكي متكامل لتحويل النصوص والسكربتات العربية إلى مقاطع فيديو احترافية مع تعليق صوتي وترجمة وتلقين تلقائي.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
