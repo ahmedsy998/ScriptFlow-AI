@@ -6,6 +6,10 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
 jobs:
   build-debug-apk:
     name: Build & Package Android Debug APK
@@ -21,19 +25,33 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Android SDK licenses & install components
+      - name: Install Android SDK components
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-36" || true
+          set -euo pipefail
+
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "ERROR: Android SDK command-line tools not found in $ANDROID_HOME/cmdline-tools."
+            exit 1
+          fi
+
+          echo "Using sdkmanager: $SDKMANAGER"
+
+          # Accept SDK licenses without failing on SIGPIPE from yes under pipefail
+          { yes || true; } | "$SDKMANAGER" --licenses >/dev/null
+
+          "$SDKMANAGER" --install \
+            "platform-tools" \
+            "build-tools;36.0.0" \
+            "platforms;android-36" \
+            "platforms;android-36.1"
 
       - name: Set up Gradle & caching
         uses: gradle/actions/setup-gradle@v4
 
       - name: Prepare debug signing keystore
         run: |
+          set -euo pipefail
           if [ ! -f debug.keystore ]; then
             if [ -f debug.keystore.base64 ]; then
               base64 -d debug.keystore.base64 > debug.keystore
@@ -61,6 +79,7 @@ jobs:
 
       - name: Verify APK artifact exists
         run: |
+          set -euo pipefail
           APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
           if [ ! -f "$APK_PATH" ]; then
             echo "ERROR: APK file not found at $APK_PATH"
@@ -71,7 +90,7 @@ jobs:
       - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
+          name: ScriptFlow-AI-Android-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
